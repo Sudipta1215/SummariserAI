@@ -1,0 +1,104 @@
+2026-01-10 13:17:36,401 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 13:17:42,042 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 13:17:49,333 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 13:17:49,333 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 13:20:08,737 - app.routers.summarizer - INFO - \U0001f3d7\ufe0f [Background] Processing Book 8...
+2026-01-10 13:20:08,801 - app.services.chunking_service - INFO - \U0001f9e9 Smart Chunking: Split text into 2 overlapping chunks.
+2026-01-10 13:20:08,801 - app.services.summarizer_service - INFO - \U0001f4da Processing 2 chunks locally...
+2026-01-10 13:23:58,608 - app.routers.summarizer - INFO - \u2705 [Background] Saved new version successfully!
+2026-01-10 13:59:34,704 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 13:59:38,226 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 13:59:43,187 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 13:59:43,187 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 14:08:19,554 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 14:08:23,492 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 14:13:13,494 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 14:13:17,105 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 14:15:32,624 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 14:15:43,962 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 14:16:44,094 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 14:16:49,998 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 14:18:45,920 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 14:18:49,871 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 14:38:07,655 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 14:38:10,868 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 14:38:16,379 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 14:38:16,379 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 14:47:41,366 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 14:47:44,279 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 14:47:47,936 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 14:47:47,936 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 14:50:57,496 - app.routers.agent - INFO - \U0001f916 Agent loading book 8...
+2026-01-10 14:50:59,212 - faiss.loader - INFO - Loading faiss with AVX2 support.
+2026-01-10 14:50:59,806 - faiss.loader - INFO - Successfully loaded faiss with AVX2 support.
+2026-01-10 14:51:11,973 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-10 14:51:12,442 - httpx - INFO - HTTP Request: POST https://api.groq.com/openai/v1/chat/completions "HTTP/1.1 200 OK"
+2026-01-10 18:50:09,852 - app.routers.summarizer - INFO - \U0001f3d7\ufe0f [Background] Processing Book 9...
+2026-01-10 18:50:10,417 - app.services.chunking_service - INFO - \U0001f9e9 Smart Chunking: Split text into 1 overlapping chunks.
+2026-01-10 18:50:10,419 - app.services.summarizer_service - INFO - \U0001f4da Processing 1 chunks locally...
+2026-01-10 18:54:44,490 - app.routers.summarizer - INFO - \u2705 [Background] Saved new version successfully!
+2026-01-10 18:55:05,951 - app.routers.agent - INFO - \U0001f916 Agent loading book 9...
+2026-01-10 19:30:52,396 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 19:30:56,029 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 19:31:02,526 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 19:31:02,527 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 22:32:48,481 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 22:32:52,525 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 22:33:00,513 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 22:33:00,513 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 22:34:21,991 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 22:34:26,254 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 22:34:31,871 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 22:34:31,871 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 22:35:43,013 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 22:35:46,804 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 22:35:50,679 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 22:35:50,679 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 22:38:31,727 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 22:38:35,435 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 22:38:51,308 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 22:38:51,309 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 22:56:34,271 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 22:56:37,360 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 22:56:42,432 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 22:56:42,433 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 23:00:13,178 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 23:00:16,635 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 23:00:21,362 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 23:00:21,362 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 23:00:21,430 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 23:00:27,859 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 23:00:31,497 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 23:00:31,498 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 23:05:10,591 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 23:05:14,474 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 23:06:02,014 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 23:06:02,015 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 23:06:49,086 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 23:06:53,064 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 23:06:57,812 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 23:06:57,813 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 23:07:06,160 - httpx - INFO - HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2026-01-10 23:07:06,992 - httpx - INFO - HTTP Request: POST http://testserver/users/ "HTTP/1.1 200 OK"
+2026-01-10 23:07:07,599 - httpx - INFO - HTTP Request: POST http://testserver/login "HTTP/1.1 200 OK"
+2026-01-10 23:07:07,716 - httpx - INFO - HTTP Request: POST http://testserver/books/ "HTTP/1.1 400 Bad Request"
+2026-01-10 23:07:08,116 - httpx - INFO - HTTP Request: POST http://testserver/books/ "HTTP/1.1 400 Bad Request"
+2026-01-10 23:07:08,176 - httpx - INFO - HTTP Request: GET http://testserver/admin/stats "HTTP/1.1 200 OK"
+2026-01-10 23:10:04,710 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 23:10:05,941 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-10 23:10:10,839 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 23:10:10,839 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-10 23:10:15,587 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 23:10:15,587 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 23:10:15,588 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-10 23:10:15,589 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2
+2026-01-10 23:10:20,715 - httpx - INFO - HTTP Request: GET http://testserver/ "HTTP/1.1 200 OK"
+2026-01-10 23:10:21,708 - httpx - INFO - HTTP Request: POST http://testserver/users/ "HTTP/1.1 200 OK"
+2026-01-10 23:10:22,103 - httpx - INFO - HTTP Request: POST http://testserver/login "HTTP/1.1 200 OK"
+2026-01-10 23:10:22,115 - httpx - INFO - HTTP Request: POST http://testserver/books/ "HTTP/1.1 400 Bad Request"
+2026-01-10 23:10:22,738 - httpx - INFO - HTTP Request: POST http://testserver/books/ "HTTP/1.1 400 Bad Request"
+2026-01-10 23:10:22,769 - httpx - INFO - HTTP Request: GET http://testserver/admin/stats "HTTP/1.1 200 OK"
+2026-01-11 00:56:35,548 - app.services.summarizer_service - INFO - \u23f3 Loading Local Model: facebook/bart-large-cnn...
+2026-01-11 00:56:43,514 - app.services.summarizer_service - INFO - \u2705 Local Model Loaded!
+2026-01-11 00:57:21,983 - sentence_transformers.SentenceTransformer - INFO - Use pytorch device_name: cpu
+2026-01-11 00:57:21,984 - sentence_transformers.SentenceTransformer - INFO - Load pretrained SentenceTransformer: sentence-transformers/all-MiniLM-L6-v2

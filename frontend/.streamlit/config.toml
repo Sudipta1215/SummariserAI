@@ -1,0 +1,7 @@
+[theme]
+base = "light"
+primaryColor = "#815355"        # The Mauve/Brown for interactive elements
+backgroundColor = "#ECF8FD"     # The Very Light Blue for the main background
+secondaryBackgroundColor = "#AFCBD5" # The Muted Blue for sidebar/inputs
+textColor = "#272838"           # The Dark Navy for text (high readability)
+font = "sans serif"

@@ -1,0 +1,160 @@
+Task 17 : Error Handling and Validation
+Error Handling :
+"What Should The System do When Something Goes Wrong"
+
+Eg:
+User uploads a wrong file type
+ai runs outof memory
+database connection fails
+
+We Catch Error
+Handle it Safely
+Show a Friendly Message
+
+2. What is Validation
+Checking Inputs Before Using Them
+
+Eg: 
+is the file really pdf
+is text empty?
+is email valid 
+Validation Prevents Errors before they happen
+
+3) Input Validation ( Forms & Uploads )
+We Must Validate 
+File Uploads
+Text Inputs
+User Registration Data
+
+eg: File Size Limit
+Allowed File Types
+Required Fields
+input length
+
+this protects both: 
+Users and Backend System
+
+4)User - Friendly Error Messages
+"Please Upload a PDF File"
+"text is too long, try a shorter input"
+"something went wrong,please try again"
+
+5)Try - Catch Blocks ( Critical Operations )
+File Processing
+AI Model Inference
+Database Transactions 
+
+We Wrap Them in try-catch blocks so:
+Errors are caught
+app does not crash
+we can respond properly
+
+6)Logging Errors for Developers
+Developers See :
+Error Details
+Error Time
+Error Type
+
+Logging Helps:
+Debug Issues
+Improve Perfomance
+Monitor system health
+
+7) Fallback Mechanisms ( When AI Fails )
+Suggest Shorter Text
+Suggest Different Settings
+Retry Automatically
+
+8) Rate Limiting 
+Some User May :
+Spam Requests
+Overload the System 
+
+Rate Limiting:
+Limit number of requests
+protects server
+ensures fairness
+
+Implementation:
+Step1: Input Validation 
+
+file validation:
+def validate_file(file):
+	if not file.filename.endswith(".pdf"):
+		raise ValueError("Only PDF Files are allowd")
+
+text Validation
+def  validate_text(text):
+	if not text.strip():
+		raise ValueError("text cannot be empty")
+
+Step2:User- Friendly Error Messages
+try:
+	validate_text(text)
+except ValueError as e:
+	return {"error":str(e)}
+
+step3: Try-Catch Around Critical Operations
+try:
+	summary = generate_summary(text)
+except Exception:
+	return {"error":"Summary Generation failed. Try Shorter Text."}
+
+Step4: logging Errors
+import logging
+Try:
+Except:
+
+Step5: Fallback Mechanism
+Try: 
+	summary = generate_summary(long_text)
+except:
+	summary = generate_summary(short_text)
+
+steo6 : Rate Limiting ( FastAPI )
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+
+@app.post("/summarize)
+@limiter.limit("5/minute")
+
+Step7: Frontend Validation
+<input type="file" accept=".pdf" required>
+<textarea minLength="50"></textarea>
+
+step8: Global Exception Handler
+@app.exception_handler(Exception)
+-------------------------
+--------------
+return JSONResponse(
+	status_code=500,
+	content={"message":"Something Went Wrong.Please try again later."})
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
