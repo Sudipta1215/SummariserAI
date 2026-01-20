@@ -1,40 +1,35 @@
-from fastapi import APIRouter, HTTPException, Body
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
 from fastapi.responses import Response
-from app.services.sarvam_service import translate_text_sarvam, text_to_speech_sarvam
 
+from app.services.sarvam_service import sarvam_service
+
+# ✅ Keep prefix empty here if you are adding prefix="/translate" in main.py
 router = APIRouter(tags=["Sarvam AI"])
 
-# 1. TRANSLATION ENDPOINT
-# Path becomes: /translate/sarvam
+class TranslationRequest(BaseModel):
+    text: str
+    target_language_code: str
+
 @router.post("/sarvam")
-def sarvam_translate(payload: dict = Body(...)):
-    text = payload.get("text")
-    target_lang = payload.get("target_lang")
-    source_lang = payload.get("source_lang", "en-IN")
-    
-    if not text or not target_lang:
-        raise HTTPException(status_code=400, detail="Missing text or language code")
-    
-    result = translate_text_sarvam(text, source_lang, target_lang)
-    
+async def translate_indic(request: TranslationRequest):
+    result = sarvam_service.translate_text(
+        request.text,
+        request.target_language_code
+    )
     if not result:
-        raise HTTPException(status_code=502, detail="Sarvam translation failed (Check API Key)")
-        
+        raise HTTPException(status_code=502, detail="Sarvam Translation API failed")
+
     return {"translated_text": result}
 
-# 2. TTS ENDPOINT
-# Path becomes: /translate/sarvam/tts  <-- FIXED PATH
 @router.post("/sarvam/tts")
-def sarvam_tts(payload: dict = Body(...)):
-    text = payload.get("text")
-    target_lang = payload.get("target_lang")
-    
-    if not text or not target_lang:
-        raise HTTPException(status_code=400, detail="Missing text or language code")
-        
-    audio_bytes = text_to_speech_sarvam(text, target_lang)
-    
+async def tts_indic(request: TranslationRequest):
+    # ✅ service now returns WAV bytes (already decoded)
+    audio_bytes = sarvam_service.text_to_speech(
+        request.text,
+        request.target_language_code
+    )
     if not audio_bytes:
-        raise HTTPException(status_code=502, detail="Sarvam TTS failed")
-        
+        raise HTTPException(status_code=502, detail="Sarvam TTS API failed")
+
     return Response(content=audio_bytes, media_type="audio/wav")

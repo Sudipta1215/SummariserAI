@@ -1,55 +1,84 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
+from pydantic import BaseModel, Field
+from typing import List
+import json
+
+# ✅ CORRECT IMPORTS FOR NEW LANGCHAIN
+from langchain_groq import ChatGroq
+from langchain_core.prompts import PromptTemplate
+from langchain_core.output_parsers import PydanticOutputParser
+
 from app.utils.database import get_db
-from app.models import Book, Summary, User
+from app.models import Book
 
-router = APIRouter(tags=["Knowledge Graph"])
+router = APIRouter(tags=["KnowledgeGraph"])
 
-@router.get("/{book_id}")
-def generate_knowledge_graph(book_id: int, db: Session = Depends(get_db)):
-    # 1. Fetch Data
+# --- DATA MODELS ---
+class Node(BaseModel):
+    id: str
+    label: str
+    type: str = Field(description="Type of entity: Character, Location, Concept, Event")
+    details: str = Field(description="Brief description or bio of the entity")
+
+class Edge(BaseModel):
+    source: str
+    target: str
+    relation: str = Field(description="Relationship label, e.g., 'friend of', 'located in'")
+
+class GraphData(BaseModel):
+    nodes: List[Node]
+    edges: List[Edge]
+
+# --- AI SETUP ---
+# Ensure GROQ_API_KEY is set in your .env file
+llm = ChatGroq(model_name="llama-3.3-70b-versatile", temperature=0.3)
+parser = PydanticOutputParser(pydantic_object=GraphData)
+
+@router.get("/generate/{book_id}")
+def generate_graph(book_id: int, type: str = "network", db: Session = Depends(get_db)):
     book = db.query(Book).filter(Book.book_id == book_id).first()
-    if not book:
-        raise HTTPException(404, "Book not found")
+    if not book or not book.extracted_text:
+        raise HTTPException(404, "Book not found or empty")
+
+    # Limit text to fit context window (approx 4000 chars)
+    text_sample = book.extracted_text[:4000]
+
+    # Define prompt based on visual type
+    if type == "mindmap":
+        instruction = """
+        Generate a hierarchical Mind Map structure.
+        - The central node should be the Book Title.
+        - Level 1 nodes: Main Themes or Chapters.
+        - Level 2 nodes: Key concepts, events, or characters within those themes.
+        - Edges should represent 'contains' or 'relates to'.
+        """
+    else: # Network (standard knowledge graph)
+        instruction = """
+        Extract key entities (Characters, Locations, Concepts) and their relationships.
+        - Focus on the most important connections.
+        - Avoid creating disconnected islands.
+        """
+
+    prompt = PromptTemplate(
+        template="""
+        Analyze the following text and extract a Knowledge Graph.
         
-    user = db.query(User).filter(User.user_id == book.user_id).first()
-    summaries = db.query(Summary).filter(Summary.book_id == book_id).all()
-
-    nodes = []
-    edges = []
-    
-    # 2. Add Central Node (The Book)
-    nodes.append({"id": f"Book_{book_id}", "label": book.title, "color": "#E63946"}) # Red
-
-    # 3. Add Author Node
-    if book.author:
-        author_id = f"Author_{book.author}"
-        nodes.append({"id": author_id, "label": book.author, "color": "#457B9D"}) # Blue
-        edges.append({"source": author_id, "target": f"Book_{book_id}", "relation": "wrote"})
-
-    # 4. Add User Node (Owner)
-    if user:
-        user_node_id = f"User_{user.user_id}"
-        nodes.append({"id": user_node_id, "label": user.name, "color": "#1D3557"}) # Navy
-        edges.append({"source": user_node_id, "target": f"Book_{book_id}", "relation": "uploaded"})
-
-    # 5. Add Summary Nodes & Keywords
-    for idx, sm in enumerate(summaries):
-        summary_node_id = f"Summary_{sm.summary_id}"
-        nodes.append({"id": summary_node_id, "label": f"Summary {idx+1}", "color": "#F4A261"}) # Orange
-        edges.append({"source": f"Book_{book_id}", "target": summary_node_id, "relation": "has_summary"})
+        TEXT: "{text}"
         
-        # Simple Keyword Extraction (Naive approach for demo)
-        # In a real app, use NLP (Spacy/NLTK) here
-        if sm.summary_text:
-            # Extract capitalized words as "Concepts"
-            words = set([w.strip(".,") for w in sm.summary_text.split() if w[0].isupper() and len(w) > 4])
-            for i, word in enumerate(list(words)[:5]): # Limit to 5 concepts per summary
-                concept_id = f"Concept_{word}"
-                # Avoid duplicates
-                if not any(n['id'] == concept_id for n in nodes):
-                    nodes.append({"id": concept_id, "label": word, "color": "#2A9D8F"}) # Teal
-                
-                edges.append({"source": summary_node_id, "target": concept_id, "relation": "mentions"})
+        INSTRUCTION: {instruction}
+        
+        {format_instructions}
+        """,
+        input_variables=["text", "instruction"],
+        partial_variables={"format_instructions": parser.get_format_instructions()}
+    )
 
-    return {"nodes": nodes, "edges": edges}
+    try:
+        chain = prompt | llm | parser
+        result = chain.invoke({"text": text_sample, "instruction": instruction})
+        return result
+    except Exception as e:
+        print(f"Graph Gen Error: {e}")
+        # Return empty structure on failure so frontend doesn't crash
+        return {"nodes": [], "edges": []}

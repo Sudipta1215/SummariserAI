@@ -5,135 +5,95 @@ from typing import List, Optional
 from datetime import datetime
 import shutil
 import os
-import fitz  # PyMuPDF
+import fitz
 
-from app.utils.database import get_db
-from app.models import Book
+from app.utils.database import get_db, SessionLocal
+from app.models import Book, User
+# Now this import will work!
+from app.routers.auth import get_current_user 
 
-# ✅ NO PREFIX HERE (Handled in main.py)
 router = APIRouter(tags=["Books"])
 
-# ==========================================
-# 📝 PYDANTIC SCHEMAS
-# ==========================================
 class BookResponse(BaseModel):
     book_id: int
     title: str
     author: Optional[str] = None
     status: str
     is_flagged: bool = False
-    
-    # ✅ FIX: Use 'created_at' to match your Database Model
     created_at: datetime
-    
-    # Analytics
-    word_count: Optional[int] = 0
-    char_count: Optional[int] = 0
-    
+    word_count: int
+    char_count: int
+
     class Config:
         from_attributes = True
 
-# ==========================================
-# ⚙️ HELPER FUNCTIONS
-# ==========================================
-def extract_text_from_file(file_path: str) -> str:
-    text = ""
+def analyze_and_update_book(book_id: int, file_path: str, db_session_maker):
+    db: Session = db_session_maker()
     try:
+        book = db.query(Book).filter(Book.book_id == book_id).first()
+        if not book: return
+        text = ""
         if file_path.endswith(".pdf"):
             doc = fitz.open(file_path)
-            for page in doc:
-                text += page.get_text() + "\n"
+            text = "\n".join([page.get_text() for page in doc])
         elif file_path.endswith(".txt"):
             with open(file_path, "r", encoding="utf-8", errors="ignore") as f:
                 text = f.read()
-    except Exception as e:
-        print(f"Text extraction failed: {e}")
-    return text
 
-def process_book_background(book_id: int, file_path: str, db: Session):
-    try:
-        text = extract_text_from_file(file_path)
-        book = db.query(Book).filter(Book.book_id == book_id).first()
-        if book:
-            book.extracted_text = text
-            book.word_count = len(text.split())
-            book.char_count = len(text)
-            book.status = "completed"
-            db.commit()
-            print(f"✅ Processed Book {book_id}")
+        book.extracted_text = text
+        book.word_count = len(text.split())
+        book.char_count = len(text)
+        book.status = "completed"
+        db.commit()
     except Exception as e:
-        print(f"❌ Failed to process book {book_id}: {e}")
-        book = db.query(Book).filter(Book.book_id == book_id).first()
-        if book:
-            book.status = "failed"
-            db.commit()
-
-# ==========================================
-# 📂 ROUTES
-# ==========================================
+        db.rollback()
+    finally:
+        db.close()
 
 @router.post("/", response_model=BookResponse)
 async def upload_book(
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     author: str = Form(None),
     file: UploadFile = File(...),
-    background_tasks: BackgroundTasks = BackgroundTasks(),
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
 ):
-    # 1. Validation
-    if not file.filename.lower().endswith(('.pdf', '.txt', '.docx')):
-        raise HTTPException(status_code=400, detail="Only PDF, DOCX, and TXT allowed")
-
-    # 2. Save File
     upload_dir = "uploads"
     os.makedirs(upload_dir, exist_ok=True)
-    file_path = f"{upload_dir}/{file.filename}"
-    
+    file_path = os.path.join(upload_dir, file.filename)
+
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    # 3. Create DB Entry
     new_book = Book(
         title=title,
         author=author,
-        user_id=1,  # Default to admin for now
+        user_id=current_user.user_id,
         file_path=file_path,
         status="processing",
-        extracted_text="",
-        is_flagged=False
+        word_count=0,
+        char_count=0
     )
-    
+
     db.add(new_book)
     db.commit()
     db.refresh(new_book)
 
-    # 4. Background Task
-    background_tasks.add_task(process_book_background, new_book.book_id, file_path, db)
-
+    background_tasks.add_task(analyze_and_update_book, new_book.book_id, file_path, SessionLocal)
     return new_book
 
 @router.get("/", response_model=List[BookResponse])
-def get_books(db: Session = Depends(get_db)):
-    return db.query(Book).order_by(Book.created_at.desc()).all()
+def get_books(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return db.query(Book).filter(Book.user_id == current_user.user_id).all()
 
-@router.get("/{book_id}", response_model=BookResponse)
-def get_book(book_id: int, db: Session = Depends(get_db)):
-    book = db.query(Book).filter(Book.book_id == book_id).first()
-    if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
-    return book
-
+# In backend/app/routers/books.py
 @router.delete("/{book_id}")
-def delete_book(book_id: int, db: Session = Depends(get_db)):
-    book = db.query(Book).filter(Book.book_id == book_id).first()
+def delete_book(book_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    book = db.query(Book).filter(Book.book_id == book_id, Book.user_id == current_user.user_id).first()
     if not book:
         raise HTTPException(status_code=404, detail="Book not found")
-    
-    # Delete related summaries first (Foreign Key)
-    # Import locally to avoid circular import issues
-    from app.models import Summary
-    db.query(Summary).filter(Summary.book_id == book_id).delete()
     
     db.delete(book)
     db.commit()
-    return {"message": "Book deleted"}
+    return {"message": "Book deleted successfully"}

@@ -1,1 +1,28 @@
-backend/.env
+# Dependencies
+node_modules/
+
+# Secrets and Environment Variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+logs/
+*.log
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+
+# Build/Dist Directories (if you build your project)
+dist/
+build/
+
+# Editor/IDE Settings (Optional but recommended)
+.vscode/
+.idea/

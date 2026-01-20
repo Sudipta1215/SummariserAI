@@ -1,121 +1,195 @@
-import requests
 import os
+import requests
 import logging
 import base64
-
-# Ensure you have SARVAM_API_KEY in your .env file
-SARVAM_API_KEY = os.getenv("SARVAM_API_KEY")
+from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
-# --- VOICE MAPPING (Authentic voices for each language) ---
-# Based on your error log's valid speaker list
-VOICE_MAP = {
-    "hi-IN": "meera",    # Fallback/Default (If meera is invalid, we swap below)
-    "en-IN": "aditya",   # English
-    "ta-IN": "vidya",    # Tamil
-    "te-IN": "aravind",  # Telugu (Approximation, using valid list below)
-    "ml-IN": "amrutha",  # Malayalam
-    "bn-IN": "aditi",    # Bengali
-    "kn-IN": "kavya",    # Kannada
-    "mr-IN": "aditya",   # Marathi
-    "gu-IN": "priya",    # Gujarati
-    "pa-IN": "rohan",    # Punjabi
-    "od-IN": "neha"      # Odia
-}
 
-# VALID SPEAKERS LIST (From your error log):
-# 'anushka', 'abhilash', 'manisha', 'vidya', 'arya', 'karun', 'hitesh', 'aditya', 
-# 'ritu', 'priya', 'neha', 'rahul', 'pooja', 'rohan', 'simran', 'kavya', 'amit', 
-# 'dev', 'ishita', 'shreya', 'ratan', 'varun', 'manan', 'sumit', 'roopa', 'kabir', 
-# 'aayan', 'shubh', 'ashutosh', 'advait', 'amelia', 'sophia'
+class SarvamService:
+    def __init__(self):
+        self.api_key = os.getenv("SARVAM_API_KEY")
+        self.base_url = "https://api.sarvam.ai"
 
-def get_best_voice(lang_code):
-    """
-    Returns a valid speaker name based on language.
-    """
-    # Map languages to valid speakers from the error log
-    if "hi" in lang_code: return "aditya"   # Hindi Male
-    if "en" in lang_code: return "sophia"   # English Female
-    if "ta" in lang_code: return "vidya"    # Tamil Female
-    if "te" in lang_code: return "roopa"    # Telugu Female
-    if "kn" in lang_code: return "kavya"    # Kannada Female
-    if "ml" in lang_code: return "abhilash" # Malayalam Male
-    if "bn" in lang_code: return "ishita"   # Bengali Female
-    if "gu" in lang_code: return "priya"    # Gujarati Female
-    if "pa" in lang_code: return "rohan"    # Punjabi Male
-    if "mr" in lang_code: return "varun"    # Marathi Male
-    
-    return "aditya" # Default fallback
+        # translate limit ~1000; keep buffer
+        self.translate_soft_limit = 900
 
-def translate_text_sarvam(text: str, source_code: str, target_code: str):
-    """
-    Translates text using Sarvam AI.
-    """
-    if not SARVAM_API_KEY: 
-        logger.error("❌ SARVAM_API_KEY is missing.")
-        return None
+        # TTS limits can be strict depending on model; use safe slice
+        self.tts_soft_limit = 500
 
-    url = "https://api.sarvam.ai/translate"
-    payload = {
-        "input": text,
-        "source_language_code": source_code,
-        "target_language_code": target_code,
-        "mode": "formal"
-    }
-    headers = {
-        "api-subscription-key": SARVAM_API_KEY, 
-        "Content-Type": "application/json"
-    }
+    # ✅ VALID SPEAKERS FOR bulbul:v2 (from your logs)
+    # anushka, abhilash, manisha, vidya, arya, karun, hitesh
+    def get_best_voice(self, lang_code: str) -> str:
+        lang = (lang_code or "").lower()
 
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
-            return response.json().get("translated_text")
-        else:
-            logger.error(f"Sarvam Translate Error: {response.text}")
+        if any(x in lang for x in ["ta-in", "te-in", "kn-in", "ml-in"]):
+            return "vidya"
+
+        if "pa-in" in lang:
+            return "hitesh"
+
+        if "mr-in" in lang or "gu-in" in lang:
+            return "arya"
+
+        if any(x in lang for x in ["hi-in", "bn-in", "od-in"]):
+            return "anushka"
+
+        if "en-in" in lang:
+            return "karun"
+
+        # ✅ match your function-style fallback
+        return "karun"
+
+    def _headers(self) -> dict:
+        return {
+            "api-subscription-key": self.api_key or "",
+            "Content-Type": "application/json",
+        }
+
+    def split_text(self, text: str, max_chars: int = 900) -> List[str]:
+        """
+        Splits text into chunks at sentence boundaries to stay under Sarvam limit.
+        Similar behavior to your function split_text_for_sarvam().
+        """
+        if not text:
+            return []
+
+        text = text.strip()
+        sentences = text.split(". ")
+        chunks: List[str] = []
+        current = ""
+
+        for s in sentences:
+            s = s.strip()
+            if not s:
+                continue
+
+            # add back period
+            piece = s if s.endswith(".") else s + "."
+            piece += " "
+
+            if len(current) + len(piece) <= max_chars:
+                current += piece
+            else:
+                if current.strip():
+                    chunks.append(current.strip())
+                current = piece
+
+        if current.strip():
+            chunks.append(current.strip())
+
+        return chunks
+
+    def _call_translate_api(
+        self,
+        text: str,
+        source_lang: str,
+        target_lang: str,
+        mode: str,
+    ) -> Optional[str]:
+        url = f"{self.base_url}/translate"
+        payload = {
+            "input": text,
+            "source_language_code": source_lang,
+            "target_language_code": target_lang,
+            "mode": mode,
+        }
+
+        try:
+            res = requests.post(url, json=payload, headers=self._headers(), timeout=30)
+            if res.status_code == 200:
+                return res.json().get("translated_text")
+            logger.error(f"Sarvam API Error ({res.status_code}): {res.text}")
             return None
-    except Exception as e:
-        logger.error(f"Sarvam Translate Connection Error: {e}")
-        return None
-
-def text_to_speech_sarvam(text: str, language_code: str):
-    """
-    Converts text to audio (WAV base64) using Sarvam AI.
-    """
-    if not SARVAM_API_KEY: 
-        logger.error("❌ SARVAM_API_KEY is missing.")
-        return None
-
-    # 1. Select the correct voice for the language
-    speaker_name = get_best_voice(language_code)
-
-    url = "https://api.sarvam.ai/text-to-speech"
-    payload = {
-        "inputs": [text],
-        "target_language_code": language_code,
-        "speaker": speaker_name,  # ✅ Uses a valid speaker name now
-        "pitch": 0,
-        "pace": 1.0,
-        "loudness": 1.5,
-        "speech_sample_rate": 8000,
-        "enable_preprocessing": True,
-        "model": "bulbul:v2"      # ✅ Updated from 'v1' to 'v2' (Fixes the 502 error)
-    }
-    headers = {
-        "api-subscription-key": SARVAM_API_KEY, 
-        "Content-Type": "application/json"
-    }
-
-    try:
-        response = requests.post(url, json=payload, headers=headers)
-        if response.status_code == 200:
-            audios = response.json().get("audios", [])
-            if audios:
-                return base64.b64decode(audios[0])
-        else:
-            logger.error(f"Sarvam TTS Error: {response.text}")
+        except Exception as e:
+            logger.error(f"Sarvam Connection Error: {e}")
             return None
-    except Exception as e:
-        logger.error(f"Sarvam TTS Connection Error: {e}")
-        return None
+
+    def translate_text(
+        self,
+        text: str,
+        target_lang: str,
+        source_lang: str = "en-IN",
+        mode: str = "formal",
+    ) -> Optional[str]:
+        """
+        ✅ Always chunk safely (prevents 1000-char failures).
+        Joins translated chunks into one output.
+        """
+        if not self.api_key:
+            logger.error("❌ SARVAM_API_KEY is missing.")
+            return None
+
+        if not text or not text.strip():
+            return ""
+
+        text = text.strip()
+
+        # ✅ Always chunk (safe + consistent)
+        chunks = self.split_text(text, max_chars=self.translate_soft_limit)
+        translated_results: List[str] = []
+
+        for i, chunk in enumerate(chunks, start=1):
+            translated = self._call_translate_api(chunk, source_lang, target_lang, mode)
+            if translated:
+                translated_results.append(translated.strip())
+            else:
+                logger.error(f"Sarvam Chunk {i}/{len(chunks)} failed.")
+                return None
+
+        return " ".join(translated_results).strip() if translated_results else None
+
+    def text_to_speech(
+        self,
+        text: str,
+        target_lang: str,
+        model: str = "bulbul:v2",
+        speech_sample_rate: int = 8000,
+    ) -> Optional[bytes]:
+        """
+        ✅ TTS sends only a safe chunk (first 500 chars),
+        returns decoded WAV bytes.
+        """
+        if not self.api_key:
+            logger.error("❌ SARVAM_API_KEY is missing.")
+            return None
+
+        if not text or not text.strip():
+            return None
+
+        safe_text = text.strip()[: self.tts_soft_limit]
+        speaker_name = self.get_best_voice(target_lang)
+
+        url = f"{self.base_url}/text-to-speech"
+        payload = {
+            "inputs": [safe_text],
+            "target_language_code": target_lang,
+            "speaker": speaker_name,
+            "model": model,
+
+            # optional params (keep if you want)
+            "pitch": 0,
+            "pace": 1.0,
+            "loudness": 1.5,
+            "speech_sample_rate": speech_sample_rate,
+            "enable_preprocessing": True,
+        }
+
+        try:
+            res = requests.post(url, json=payload, headers=self._headers(), timeout=60)
+            if res.status_code == 200:
+                audios = res.json().get("audios", [])
+                if audios and audios[0]:
+                    return base64.b64decode(audios[0])
+                logger.error("Sarvam TTS Error: audios missing/empty in response.")
+                return None
+
+            logger.error(f"Sarvam TTS Error ({res.status_code}): {res.text}")
+            return None
+        except Exception as e:
+            logger.error(f"Sarvam TTS Connection Error: {e}")
+            return None
+
+
+sarvam_service = SarvamService()

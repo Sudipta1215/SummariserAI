@@ -1,140 +1,167 @@
-import torch
-from transformers import pipeline, AutoTokenizer, AutoModelForSeq2SeqLM
-import logging
+import os
+import time
 import re
-from app.services.chunking_service import chunker 
-# Ensure you have this file created from the previous step
-from app.utils.postprocessing import clean_formatting, remove_redundancy, extract_local_keywords
+import logging
+from typing import Dict, Any, Optional
 
-logging.basicConfig(level=logging.INFO)
+from google import genai
+from google.genai.errors import ClientError
+from tenacity import retry, wait_exponential_jitter, stop_after_attempt, retry_if_exception_type
+
+from app.utils.postprocessing import clean_formatting, extract_local_keywords
+
 logger = logging.getLogger(__name__)
 
+
+def wait_for_files_active(client: genai.Client, files, timeout_seconds: int = 180):
+    logger.info("⏳ Gemini performing OCR/Analysis...")
+    start = time.time()
+
+    for f in files:
+        while True:
+            file_obj = client.files.get(name=f.name)
+            state = str(file_obj.state).upper()
+
+            if "ACTIVE" in state:
+                break
+            if "FAILED" in state:
+                raise RuntimeError(f"OCR Failed: {file_obj.name}")
+            if time.time() - start > timeout_seconds:
+                raise TimeoutError("Gemini processing timed out.")
+
+            time.sleep(5)
+
+    logger.info("✅ File is ACTIVE.")
+
+
 class SummarizerService:
-    _instance = None
+    _instance: Optional["SummarizerService"] = None
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(SummarizerService, cls).__new__(cls)
-            cls._instance._initialize_model()
+            cls._instance._initialize_api()
         return cls._instance
 
-    def _initialize_model(self):
-        self.model_name = "facebook/bart-large-cnn"
-        logger.info(f"⏳ Loading Local Model: {self.model_name}...")
+    def _initialize_api(self) -> None:
+        self.api_key = os.getenv("GEMINI_API_KEY")
+        if not self.api_key:
+            raise RuntimeError("GEMINI_API_KEY is missing from .env")
+
+        self.client = genai.Client(api_key=self.api_key)
+
+        # ✅ Get primary and fallback from .env
+        raw_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+        self.model_name = raw_model.replace("models/", "").strip()
         
-        if torch.cuda.is_available(): self.device = 0 
-        else: self.device = -1 
-        
+        # Add fallback model to the service instance
+        raw_fallback = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
+        self.fallback_model = raw_fallback.replace("models/", "").strip()
+
+        logger.info(f"✅ Gemini API Initialized (Primary: {self.model_name}, Fallback: {self.fallback_model})")
+    @retry(
+        wait=wait_exponential_jitter(initial=10, max=120),
+        stop=stop_after_attempt(3),
+        retry=retry_if_exception_type(ClientError),
+        reraise=True,
+    )
+    def generate_summary(
+        self,
+        file_path: str,
+        length_option: str = "medium",
+        style: str = "paragraph",
+    ) -> Dict[str, Any]:
+        uploaded_file = None
+
         try:
-            self.tokenizer = AutoTokenizer.from_pretrained(self.model_name)
-            self.model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name)
-            self.pipeline = pipeline(
-                "summarization", model=self.model, tokenizer=self.tokenizer, device=self.device
+            if not os.path.exists(file_path):
+                raise FileNotFoundError(f"Invalid file path: {file_path}")
+
+            # 1) Upload + OCR wait
+            uploaded_file = self.client.files.upload(file=file_path)
+            wait_for_files_active(self.client, [uploaded_file])
+
+            # 2) Style normalize
+            style_norm = (style or "paragraph").strip().lower()
+            is_bullet_mode = style_norm in {"bullet", "bullets", "bullet points", "bullet_points"}
+
+            # 3) Prompt
+            if is_bullet_mode:
+                style_instruction = (
+                    "Format the summary as a vertical list of bullet points. "
+                    "Each bullet MUST start with '- ' on a NEW LINE. "
+                    "Each bullet should ideally be one sentence. "
+                    "Do not use paragraphs."
+                )
+            else:
+                style_instruction = (
+                    "Format the summary as cohesive paragraphs. "
+                    "Do not use bullet points, dashes, or lists."
+                )
+
+            prompt = (
+                "Summarize the provided document accurately.\n"
+                f"Desired Length: {length_option}\n"
+                f"{style_instruction}\n"
+                "Provide only the summary text."
             )
-            logger.info("✅ Local Model Loaded!")
+
+            # 4) Generate
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=[uploaded_file, prompt],
+            )
+
+            raw_text = getattr(response, "text", "") or ""
+            polished_text = clean_formatting(raw_text).strip()
+
+            # =========================================
+            # 5) STRICT RECONSTRUCTION (FIXED)
+            # =========================================
+            if is_bullet_mode:
+                # Split by newline OR bullet markers that may appear inline
+                raw_points = re.split(r"\n|(?<=\s)[-•*]\s", polished_text)
+
+                bullets = []
+                for pt in raw_points:
+                    clean_pt = pt.strip().lstrip("-*• ").strip()
+                    if clean_pt:
+                        bullets.append(clean_pt)
+
+                polished_text = "\n".join([f"- {b}" for b in bullets]).strip()
+
+            else:
+                # Keep real paragraphs: split by double newline
+                paragraphs = [p.strip() for p in polished_text.split("\n\n") if p.strip()]
+                clean_paragraphs = []
+
+                for p in paragraphs:
+                    # Flatten lines INSIDE the paragraph (prevents line-by-line output)
+                    lines = [line.strip() for line in p.splitlines() if line.strip()]
+                    # Remove accidental bullet markers at line starts
+                    lines = [ln.lstrip("-*• ").strip() for ln in lines]
+                    flattened = " ".join(lines).strip()
+                    if flattened:
+                        clean_paragraphs.append(flattened)
+
+                polished_text = "\n\n".join(clean_paragraphs).strip()
+
+            return {
+                "summary_text": polished_text,
+                "keywords": extract_local_keywords(polished_text) or [],
+                "status": "completed",
+            }
+
         except Exception as e:
-            logger.error(f"❌ Model Load Failed: {e}")
-            raise e
+            logger.error(f"Summarizer Error: {str(e)}", exc_info=True)
+            return {"summary_text": f"Error: {str(e)}", "keywords": [], "status": "failed"}
 
-    def _get_params(self, length_option="medium", detail_level="standard"):
-        """
-        Maps UI options to Model Constraints (Tokens).
-        """
-        # Base constraints
-        base_map = {
-            "short": {"max": 150, "min": 30},
-            "medium": {"max": 300, "min": 60},
-            "long": {"max": 600, "min": 150}
-        }
-        
-        params = base_map.get(length_option.lower(), base_map["medium"])
-        
-        # Adjust based on Detail Level
-        if detail_level.lower() == "detailed":
-            params["min"] += 50  # Force it to be longer/more detailed
-        elif detail_level.lower() == "concise":
-            params["max"] -= 30  # Force it to be tighter
+        finally:
+            if uploaded_file:
+                try:
+                    self.client.files.delete(name=uploaded_file.name)
+                except Exception:
+                    pass
 
-        return params
-
-    def apply_style(self, text, style):
-        """
-        Manually converts paragraph text to bullet points if requested.
-        """
-        if not text: return ""
-        
-        # Clean up text first
-        text = text.replace(" .", ".")
-        
-        if style == "Bullet Points":
-            # Split by sentences (simple heuristic)
-            sentences = re.split(r'(?<=[.!?]) +', text)
-            # Create bullets
-            bullets = [f"• {s.strip()}" for s in sentences if len(s.strip()) > 5]
-            return "\n".join(bullets)
-        
-        # Default: Paragraph
-        return text
-
-    def summarize_chunk(self, text, params):
-        # Calculate safe max length based on input size
-        input_len = len(self.tokenizer.encode(text))
-        
-        # Safety: Output can't be larger than input
-        safe_max = min(params['max'], int(input_len * 0.7))
-        safe_min = min(params['min'], safe_max - 5)
-        
-        if safe_max < 10: return "" # Too short to summarize
-
-        try:
-            res = self.pipeline(
-                text, 
-                max_length=safe_max, 
-                min_length=safe_min, 
-                truncation=True,
-                num_beams=4,
-                do_sample=False
-            )
-            return res[0]['summary_text']
-        except:
-            return ""
-
-    def generate_summary(self, raw_text: str, length_option="medium", style="Paragraph", detail="Standard") -> dict:
-        """
-        Main Function: Chunk -> Summarize -> Post-Process -> Style -> Return
-        """
-        # 1. Chunking
-        chunks = chunker.chunk_text(raw_text)
-        logger.info(f"📚 Processing {len(chunks)} chunks locally...")
-        
-        # 2. Constraints
-        params = self._get_params(length_option, detail)
-        
-        # 3. Summarize
-        partial_summaries = []
-        for chunk in chunks:
-            s = self.summarize_chunk(chunk, params)
-            if s: partial_summaries.append(s)
-            
-        # 4. Join
-        combined_text = " ".join(partial_summaries)
-        
-        # --- TASK 12: POST-PROCESSING ---
-        # A. Remove Duplicates
-        polished_text = remove_redundancy(combined_text)
-        
-        # B. Formatting
-        polished_text = clean_formatting(polished_text)
-        
-        # C. Apply Bullet Points (This is where the style happens!)
-        final_output = self.apply_style(polished_text, style)
-        
-        # D. Extract Keywords locally
-        keywords = extract_local_keywords(final_output)
-        
-        return {
-            "summary_text": final_output,
-            "keywords": keywords
-        }
 
 summarizer_service = SummarizerService()
