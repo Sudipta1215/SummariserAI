@@ -1,7 +1,7 @@
-# --- Force CPU-only PyTorch (Required for Render Build Success) ---
+# --- Force CPU-only PyTorch (Matched to your server's available versions) ---
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.5.1+cpu
-torchvision==0.20.1+cpu
+torch==2.10.0+cpu
+torchvision==0.21.0+cpu
 
 # --- Core Web Framework ---
 fastapi==0.124.0
@@ -24,24 +24,5 @@ youtube-transcript-api
 nltk
 reportlab
 
-# --- Document Processing ---
-PyMuPDF==1.24.0
-PyPDF2==3.0.1
-pdfplumber==0.11.0
-python-docx==1.1.0
-
-# --- Database and Environment ---
-SQLAlchemy==2.0.30
-psycopg2-binary==2.9.9
-python-dotenv==1.0.1
-pydantic==2.7.1
-
-# --- Security and Authentication ---
-python-jose[cryptography]==3.3.0
-passlib[bcrypt]==1.7.4
-bcrypt==4.1.2
-
-# --- Utilities ---
-deep-translator==1.11.4
-gTTS==2.5.1
-requests==2.31.0
+# --- Rest of your dependencies ---
+...
