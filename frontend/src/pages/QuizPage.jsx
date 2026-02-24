@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://summariserai2.onrender.com";
 
 const LANG_CODES = {
   "English": "en-IN",
