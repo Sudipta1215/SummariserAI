@@ -1,4 +1,4 @@
-# --- Force CPU-only PyTorch ---
+# --- Force CPU-only PyTorch (Keep this at the top) ---
 --extra-index-url https://download.pytorch.org/whl/cpu
 torch==2.5.1+cpu
 torchvision==0.20.1+cpu
@@ -9,12 +9,12 @@ uvicorn==0.38.0
 python-multipart==0.0.20
 slowapi
 
-# --- AI and Agents ---
+# --- AI and Agents (Updated to resolve conflicts) ---
 google-genai
 google-generativeai
 groq==0.37.1
-langchain==0.1.0
-langchain-community==0.0.13
+langchain
+langchain-community
 langchain-groq
 langchain-huggingface
 langchain-google-genai
