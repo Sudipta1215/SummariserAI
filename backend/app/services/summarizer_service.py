@@ -163,5 +163,11 @@ class SummarizerService:
                 except Exception:
                     pass
 
+# With this:
+_summarizer_instance = None
 
-summarizer_service = SummarizerService()
+def get_summarizer():
+    global _summarizer_instance
+    if _summarizer_instance is None:
+        _summarizer_instance = SummarizerService()
+    return _summarizer_instance
