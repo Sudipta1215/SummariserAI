@@ -7,7 +7,7 @@ import 'reactflow/dist/style.css';
 import dagre from 'dagre';
 import { BookOpen, Share2, Network, GitMerge, Loader2 } from 'lucide-react';
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://summariserai2.onrender.com";
 
 // --- LAYOUT ALGORITHM (Auto-arrange nodes) ---
 const getLayoutedElements = (nodes, edges, direction = 'TB') => {
