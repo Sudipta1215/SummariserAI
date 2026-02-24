@@ -11,7 +11,7 @@ import {
   AlertTriangle, Database, Download, RefreshCw, Bell, Clock, TrendingUp, Trash2, List
 } from "lucide-react";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://summariserai2.onrender.com";
 
 const PALETTE = {
   blue:   { bg: "#DDF4FF", text: "#0077B6", accent: "#48CAE4" },
