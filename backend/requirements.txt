@@ -1,3 +1,8 @@
+# --- Force CPU-only PyTorch (Required for Render Build Success) ---
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.5.1+cpu
+torchvision==0.20.1+cpu
+
 # --- Core Web Framework ---
 fastapi==0.124.0
 uvicorn==0.38.0
@@ -8,8 +13,8 @@ slowapi
 google-genai
 google-generativeai
 groq==0.37.1
-langchain==1.1.3
-langchain-community==0.4.1
+langchain==0.1.0
+langchain-community==0.0.13
 langchain-groq
 langchain-huggingface
 langchain-google-genai
@@ -20,23 +25,23 @@ nltk
 reportlab
 
 # --- Document Processing ---
-PyMuPDF==1.26.7
+PyMuPDF==1.24.0
 PyPDF2==3.0.1
-pdfplumber==0.11.8
-python-docx==1.2.0
+pdfplumber==0.11.0
+python-docx==1.1.0
 
 # --- Database and Environment ---
-SQLAlchemy==2.0.44
-psycopg2-binary==2.9.11
-python-dotenv==1.2.1
-pydantic==2.12.5
+SQLAlchemy==2.0.30
+psycopg2-binary==2.9.9
+python-dotenv==1.0.1
+pydantic==2.7.1
 
 # --- Security and Authentication ---
 python-jose[cryptography]==3.3.0
-passlib==1.7.4
-bcrypt==4.0.1
+passlib[bcrypt]==1.7.4
+bcrypt==4.1.2
 
 # --- Utilities ---
 deep-translator==1.11.4
-gTTS==2.5.4
-requests==2.32.5
+gTTS==2.5.1
+requests==2.31.0
