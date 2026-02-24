@@ -3,6 +3,7 @@ fastapi==0.124.0
 uvicorn==0.38.0
 python-multipart==0.0.20
 slowapi
+langchain-groq
 
 # --- AI and Agents ---
 google-genai
