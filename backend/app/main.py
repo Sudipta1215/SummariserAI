@@ -11,18 +11,26 @@ from fastapi.staticfiles import StaticFiles
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
-# Path fixes for Render
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) 
-sys.path.append(BASE_DIR)
-
 from app.limiter import limiter
 from app.utils.database import engine
 from app.models import Base
 
 # =========================================
-# ✅ NLTK SETUP (Production Fix)
+# ✅ PATH SETUP & LOGGING
 # =========================================
-# Set a specific path for NLTK data so Render doesn't lose it
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BACKEND_DIR = os.path.dirname(BASE_DIR)
+PROJECT_ROOT = os.path.dirname(BACKEND_DIR)
+
+if BACKEND_DIR not in sys.path:
+    sys.path.append(BACKEND_DIR)
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# =========================================
+# ✅ NLTK & DATABASE SETUP
+# =========================================
 nltk_data_path = os.path.join(BASE_DIR, "nltk_data")
 os.makedirs(nltk_data_path, exist_ok=True)
 nltk.data.path.append(nltk_data_path)
@@ -36,31 +44,95 @@ def download_nltk():
             print(f"Error downloading {pkg}: {e}")
 
 download_nltk()
-
-# =========================================
-# ✅ DATABASE & LOGGING
-# =========================================
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
-# Create tables on startup
 Base.metadata.create_all(bind=engine)
 
+# =========================================
+# ✅ APP INITIALIZATION
+# =========================================
 app = FastAPI(title="Book Summarizer API")
 
 # =========================================
-# ✅ CORS SETUP (Added Production URL)
+# ✅ CORS SETUP (MUST BE FIRST)
 # =========================================
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
-        "https://summariser-ai-frontend.onrender.com", # 👈 Add your React URL here
+        "http://localhost:3000",
+        "http://localhost:8501",
+        "https://summariserai-frotnend.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# ... (Rest of your routers and endpoints stay the same)
+# =========================================
+# ✅ RATE LIMITING
+# =========================================
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
+# =========================================
+# ✅ STATIC FILES
+# =========================================
+static_path = os.path.join(BASE_DIR, "static")
+os.makedirs(static_path, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
+# =========================================
+# ✅ REGISTER ALL ROUTERS
+# =========================================
+from app.routers import (
+    auth, books, summarizer, workspaces,
+    admin, agent, audio, graph, quiz,
+    translate, translate_sarvam,
+    youtube, meeting
+)
+
+app.include_router(auth.router, prefix="/auth", tags=["Auth"])
+app.include_router(books.router, prefix="/books", tags=["Books"])
+app.include_router(workspaces.router, prefix="/workspaces", tags=["Workspaces"])
+app.include_router(summarizer.router, prefix="/summary", tags=["Summarizer"])
+app.include_router(admin.router, prefix="/admin", tags=["Admin Analytics"])
+app.include_router(graph.router, prefix="/graph", tags=["Knowledge Graph"])
+app.include_router(quiz.router, prefix="/quiz", tags=["Quiz"])
+app.include_router(agent.router, prefix="/agent", tags=["Agent"])
+app.include_router(translate.router, prefix="/translate", tags=["Translation"])
+app.include_router(translate_sarvam.router, prefix="/translate-sarvam", tags=["Sarvam AI"])
+app.include_router(audio.router, prefix="/audio", tags=["Audio"])
+app.include_router(youtube.router, prefix="/youtube", tags=["YouTube Summary"])
+app.include_router(meeting.router, prefix="/meeting", tags=["Meeting Summarizer"])
+
+# =========================================
+# ✅ ENDPOINTS
+# =========================================
+@app.get("/")
+def read_root():
+    return {"message": "✅ Book Summarizer API is Online"}
+
+@app.get("/api/dashboard/data")
+def get_dashboard_data():
+    return {
+        "stats": {
+            "positive_score": 1.09,
+            "confidence": 64,
+            "positive_count": 12,
+            "neutral_count": 7,
+            "negative_count": 2
+        },
+        "trend_data": [
+            {"id": i, "val": v}
+            for i, v in enumerate([2, 2.2, 1.8, 3.5, 4.8, 4.2, 2.5, 3.0, 3.8, 2.2, 2.5], 1)
+        ],
+        "distribution": [
+            {"name": "Neutral", "value": 64, "color": "#6366F1"},
+            {"name": "Positive", "value": 36, "color": "#4ADE80"}
+        ]
+    }
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Unhandled error: {exc}", exc_info=True)
+    return JSONResponse(status_code=500, content={"detail": "An unexpected error occurred."})
