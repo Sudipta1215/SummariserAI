@@ -12,7 +12,6 @@ from app.utils.postprocessing import clean_formatting, extract_local_keywords
 
 logger = logging.getLogger(__name__)
 
-
 def wait_for_files_active(client: genai.Client, files, timeout_seconds: int = 180):
     logger.info("⏳ Gemini performing OCR/Analysis...")
     start = time.time()
@@ -33,7 +32,6 @@ def wait_for_files_active(client: genai.Client, files, timeout_seconds: int = 18
 
     logger.info("✅ File is ACTIVE.")
 
-
 class SummarizerService:
     _instance: Optional["SummarizerService"] = None
 
@@ -51,14 +49,14 @@ class SummarizerService:
         self.client = genai.Client(api_key=self.api_key)
 
         # ✅ Get primary and fallback from .env
-        raw_model = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
+        raw_model = os.getenv("GEMINI_MODEL", "gemini-1.5-flash")
         self.model_name = raw_model.replace("models/", "").strip()
         
-        # Add fallback model to the service instance
-        raw_fallback = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")
+        raw_fallback = os.getenv("GEMINI_FALLBACK_MODEL", "gemini-1.5-pro")
         self.fallback_model = raw_fallback.replace("models/", "").strip()
 
         logger.info(f"✅ Gemini API Initialized (Primary: {self.model_name}, Fallback: {self.fallback_model})")
+
     @retry(
         wait=wait_exponential_jitter(initial=10, max=120),
         stop=stop_after_attempt(3),
@@ -115,35 +113,24 @@ class SummarizerService:
             raw_text = getattr(response, "text", "") or ""
             polished_text = clean_formatting(raw_text).strip()
 
-            # =========================================
-            # 5) STRICT RECONSTRUCTION (FIXED)
-            # =========================================
+            # 5) Strict Reconstruction
             if is_bullet_mode:
-                # Split by newline OR bullet markers that may appear inline
                 raw_points = re.split(r"\n|(?<=\s)[-•*]\s", polished_text)
-
                 bullets = []
                 for pt in raw_points:
                     clean_pt = pt.strip().lstrip("-*• ").strip()
                     if clean_pt:
                         bullets.append(clean_pt)
-
                 polished_text = "\n".join([f"- {b}" for b in bullets]).strip()
-
             else:
-                # Keep real paragraphs: split by double newline
                 paragraphs = [p.strip() for p in polished_text.split("\n\n") if p.strip()]
                 clean_paragraphs = []
-
                 for p in paragraphs:
-                    # Flatten lines INSIDE the paragraph (prevents line-by-line output)
                     lines = [line.strip() for line in p.splitlines() if line.strip()]
-                    # Remove accidental bullet markers at line starts
                     lines = [ln.lstrip("-*• ").strip() for ln in lines]
                     flattened = " ".join(lines).strip()
                     if flattened:
                         clean_paragraphs.append(flattened)
-
                 polished_text = "\n\n".join(clean_paragraphs).strip()
 
             return {
@@ -163,11 +150,9 @@ class SummarizerService:
                 except Exception:
                     pass
 
-# With this:
-_summarizer_instance = None
+# --- THE FIX: Define the instance with the exact name the router expects ---
+summarizer_service = SummarizerService()
 
+# Maintain the getter function for FastAPI Dependency Injection
 def get_summarizer():
-    global _summarizer_instance
-    if _summarizer_instance is None:
-        _summarizer_instance = SummarizerService()
-    return _summarizer_instance
+    return summarizer_service
