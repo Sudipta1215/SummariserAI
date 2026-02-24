@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, Eye, EyeOff, ArrowRight, AlertCircle, Loader2 } from 'lucide-react';
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://summariserai2.onrender.com";
 
 const AuthPage = () => {
   const navigate = useNavigate();
