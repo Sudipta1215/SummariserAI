@@ -18,9 +18,9 @@ from app.models import Base
 # =========================================
 # ✅ PATH SETUP & LOGGING
 # =========================================
+# This ensures imports like 'from app...' work even if started from subfolders
 BASE_DIR = os.path.dirname(os.path.abspath(__file__)) 
 BACKEND_DIR = os.path.dirname(BASE_DIR)
-PROJECT_ROOT = os.path.dirname(BACKEND_DIR)
 
 if BACKEND_DIR not in sys.path:
     sys.path.append(BACKEND_DIR)
@@ -32,13 +32,10 @@ logger = logging.getLogger(__name__)
 # ✅ NLTK & DATABASE SETUP
 # =========================================
 def download_nltk():
-    required = ["punkt", "stopwords"]
+    required = ["punkt", "stopwords", "punkt_tab"] # Added punkt_tab for NLTK 3.9+
     for pkg in required:
         try:
-            if pkg == "punkt":
-                nltk.data.find("tokenizers/punkt")
-            elif pkg == "stopwords":
-                nltk.data.find("corpora/stopwords")
+            nltk.data.find(f"tokenizers/{pkg}" if pkg.startswith("punkt") else f"corpora/{pkg}")
         except LookupError:
             nltk.download(pkg, quiet=True)
 
@@ -51,7 +48,7 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Book Summarizer API")
 
 # =========================================
-# ✅ CORS SETUP
+# ✅ 1. CORS MIDDLEWARE (MUST BE FIRST)
 # =========================================
 app.add_middleware(
     CORSMiddleware,
@@ -60,7 +57,8 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://localhost:8501",
-        "https://summariserai-frotnend.onrender.com",  # ✅ Production frontend
+        "https://summariserai-frotnend.onrender.com", # Check for 'frotnend' typo in your Render URL
+        "https://summariserai.onrender.com",         # Adding possible correct spelling
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -68,27 +66,24 @@ app.add_middleware(
 )
 
 # =========================================
-# ✅ STATIC FILES
-# =========================================
-frames_dir = os.path.join(PROJECT_ROOT, "frontend", "static")
-os.makedirs(frames_dir, exist_ok=True)
-app.mount("/static", StaticFiles(directory=frames_dir), name="static")
-
-# =========================================
-# ✅ RATE LIMITING
+# ✅ 2. RATE LIMITING & STATIC FILES
 # =========================================
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+# Create static directory inside backend for easier Render access
+static_path = os.path.join(BASE_DIR, "static")
+os.makedirs(static_path, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_path), name="static")
+
 # =========================================
-# ✅ REGISTER ALL ROUTERS
+# ✅ 3. REGISTER ALL ROUTERS
 # =========================================
 from app.routers import (
     auth, books, summarizer, workspaces, 
     admin, agent, audio, graph, quiz, 
     translate, translate_sarvam, 
-    youtube, 
-    meeting  # ✅ Added Meeting Router import
+    youtube, meeting
 )
 
 app.include_router(auth.router, prefix="/auth", tags=["Auth"]) 
@@ -100,7 +95,7 @@ app.include_router(graph.router, prefix="/graph", tags=["Knowledge Graph"])
 app.include_router(quiz.router, prefix="/quiz", tags=["Quiz"])
 app.include_router(agent.router, prefix="/agent", tags=["Agent"])
 app.include_router(translate.router, prefix="/translate", tags=["Translation"])
-app.include_router(translate_sarvam.router, prefix="/translate", tags=["Sarvam AI"])
+app.include_router(translate_sarvam.router, prefix="/translate-sarvam", tags=["Sarvam AI"]) # Fixed prefix overlap
 app.include_router(audio.router, prefix="/audio", tags=["Audio"])
 app.include_router(youtube.router, prefix="/youtube", tags=["YouTube Summary"])
 app.include_router(meeting.router, prefix="/meeting", tags=["Meeting Summarizer"])
@@ -108,6 +103,10 @@ app.include_router(meeting.router, prefix="/meeting", tags=["Meeting Summarizer"
 # =========================================
 # ✅ ENDPOINTS
 # =========================================
+@app.get("/")
+def read_root():
+    return {"message": "✅ Book Summarizer API is Online", "docs": "/docs"}
+
 @app.get("/api/dashboard/data")
 def get_dashboard_data():
     return {
@@ -115,10 +114,6 @@ def get_dashboard_data():
         "trend_data": [{"id": i, "val": v} for i, v in enumerate([2, 2.2, 1.8, 3.5, 4.8, 4.2, 2.5, 3.0, 3.8, 2.2, 2.5], 1)],
         "distribution": [{"name": "Neutral", "value": 64, "color": "#6366F1"}, {"name": "Positive", "value": 36, "color": "#4ADE80"}]
     }
-
-@app.get("/")
-def read_root():
-    return {"message": "✅ Book Summarizer API is Online"}
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
