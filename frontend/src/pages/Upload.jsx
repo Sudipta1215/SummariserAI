@@ -5,7 +5,7 @@ import {
   Trash2, AlertCircle, Loader2, Book
 } from 'lucide-react';
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://summariserai2.onrender.com";
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 const Upload = () => {
