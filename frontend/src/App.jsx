@@ -27,7 +27,7 @@ import MediaSummarizer from "./pages/MediaSummarizer"; // ✅ Swapped to unified
 import RoleSelection from "./pages/RoleSelection";
 import AdminDashboard from "./pages/AdminDashboard";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://summariserai2.onrender.com";
 
 /* --- REUSABLE UI COMPONENTS --- */
 const Card = ({ children, className = "" }) => (
