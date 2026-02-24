@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import SpeedReader from "../components/SpeedReader";
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://summariserai2.onrender.com";
 
 const WORLD_LANGS = {
   "English 🇺🇸": "en", "Spanish 🇪🇸": "es", "French 🇫🇷": "fr", "German 🇩🇪": "de",
