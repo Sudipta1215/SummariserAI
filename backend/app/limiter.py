@@ -9,8 +9,3 @@ def get_real_ip(request: Request) -> str:
     return get_remote_address(request)
 
 limiter = Limiter(key_func=get_real_ip)
-```
-
-And in Render backend → **Environment**, add:
-```
-FORWARDED_ALLOW_IPS=*
