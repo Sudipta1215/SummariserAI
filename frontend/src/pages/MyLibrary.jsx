@@ -5,7 +5,7 @@ import {
   RefreshCw, Sparkles, AlertCircle, Loader2, Search, Eye
 } from 'lucide-react';
 
-const API_URL = "http://127.0.0.1:8000";
+const API_URL = "https://summariserai2.onrender.com";
 
 const MyLibrary = () => {
   const navigate = useNavigate();
