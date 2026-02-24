@@ -1,46 +1,72 @@
 import os
 from dotenv import load_dotenv
-from typing import Annotated, TypedDict, List, Union
+from typing import TypedDict, List
 from langgraph.graph import StateGraph, END
 from langchain_core.messages import HumanMessage, AIMessage, BaseMessage
-from langchain_groq import ChatGroq
-from langchain_community.tools import TavilySearchResults
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
 
-# 1. Load Environment Variables
+# Load Environment Variables
 load_dotenv()
 
-# --- CONFIGURATION ---
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 
-llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
-embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-tavily_tool = TavilySearchResults(max_results=3)
+# =========================================
+# ✅ LAZY LOADERS - only load when first used
+# =========================================
+_llm = None
+_embeddings = None
+_tavily_tool = None
 
-# --- MEMORY (RAG) SERVICE ---
+def get_llm():
+    global _llm
+    if _llm is None:
+        from langchain_groq import ChatGroq
+        _llm = ChatGroq(model="llama-3.3-70b-versatile", api_key=GROQ_API_KEY)
+    return _llm
+
+def get_embeddings():
+    global _embeddings
+    if _embeddings is None:
+        from langchain_huggingface import HuggingFaceEmbeddings
+        _embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    return _embeddings
+
+def get_tavily():
+    global _tavily_tool
+    if _tavily_tool is None:
+        from langchain_community.tools import TavilySearchResults
+        _tavily_tool = TavilySearchResults(max_results=3)
+    return _tavily_tool
+
+# =========================================
+# ✅ MEMORY (RAG) SERVICE
+# =========================================
 class BookMemory:
     def __init__(self):
         self.vector_store = None
         self.has_book = False
 
     def ingest_book(self, text_chunks: List[str]):
-        if not text_chunks: return
+        if not text_chunks:
+            return
+        from langchain_community.vectorstores import FAISS
         docs = [Document(page_content=chunk) for chunk in text_chunks]
-        self.vector_store = FAISS.from_documents(docs, embeddings)
+        self.vector_store = FAISS.from_documents(docs, get_embeddings())
         self.has_book = True
         print("✅ Document memory active!")
 
     def query_book(self, query: str) -> str:
-        if not self.vector_store: return ""
+        if not self.vector_store:
+            return ""
         docs = self.vector_store.similarity_search(query, k=5)
         return "\n\n".join([d.page_content for d in docs])
 
 book_memory = BookMemory()
 
-# --- AGENT STATE (Added chat_history for ChatGPT-like behavior) ---
+# =========================================
+# ✅ AGENT STATE
+# =========================================
 class AgentState(TypedDict):
     messages: List[BaseMessage]
     chat_history: List[BaseMessage]
@@ -48,12 +74,11 @@ class AgentState(TypedDict):
     research_data: str
     final_answer: str
 
-# --- AGENT NODES ---
-
+# =========================================
+# ✅ AGENT NODES
+# =========================================
 def planner_node(state: AgentState):
-    """Intent Router: Distinguishes between Chat, Document, and Web search."""
     query = state["messages"][-1].content
-    
     prompt = f"""You are a smart orchestrator.
     User Query: "{query}"
     Document Status: {"Attached" if book_memory.has_book else "None"}
@@ -65,25 +90,22 @@ def planner_node(state: AgentState):
     
     Respond with ONLY the category and a 1-sentence reasoning.
     """
-    response = llm.invoke(prompt)
+    response = get_llm().invoke(prompt)
     return {"plan": response.content}
 
 def research_node(state: AgentState):
-    """Data Fetcher: Executes the retrieval based on the plan."""
     plan = state["plan"].upper()
     query = state["messages"][-1].content
-    
+
     book_context = ""
     web_context = ""
 
-    # Check for Document Search
     if "DOC" in plan and book_memory.has_book:
         book_context = book_memory.query_book(query)
-    
-    # Check for Web Search
+
     if "WEB" in plan or "search" in query.lower():
         try:
-            results = tavily_tool.invoke(query)
+            results = get_tavily().invoke(query)
             web_context = "\n".join([r['content'] for r in results])
         except:
             web_context = "Web search unavailable."
@@ -92,14 +114,13 @@ def research_node(state: AgentState):
         combined_data = "GENERAL_KNOWLEDGE_MODE"
     else:
         combined_data = f"DOC_STUFF: {book_context}\n\nWEB_STUFF: {web_context}"
-        
+
     return {"research_data": combined_data}
 
 def reasoner_node(state: AgentState):
-    """Final Brain: Consolidates all info into a ChatGPT-style response."""
     query = state["messages"][-1].content
     data = state["research_data"]
-    
+
     system_prompt = """You are a helpful, conversational AI like ChatGPT. 
     1. If the user is just chatting, be friendly and engaging.
     2. If external data is provided, use it to be precise.
@@ -110,11 +131,13 @@ def reasoner_node(state: AgentState):
         {"role": "system", "content": system_prompt},
         {"role": "user", "content": f"Context: {data}\n\nUser Question: {query}"}
     ]
-    
-    response = llm.invoke(messages)
+
+    response = get_llm().invoke(messages)
     return {"final_answer": response.content}
 
-# --- GRAPH CONSTRUCTION ---
+# =========================================
+# ✅ GRAPH CONSTRUCTION
+# =========================================
 workflow = StateGraph(AgentState)
 workflow.add_node("planner", planner_node)
 workflow.add_node("researcher", research_node)
@@ -127,9 +150,10 @@ workflow.add_edge("reasoner", END)
 
 app_graph = workflow.compile()
 
-# --- HELPER FUNCTIONS ---
+# =========================================
+# ✅ HELPER FUNCTIONS
+# =========================================
 def run_agent(user_query: str, history: list = []):
-    # This wrapper allows the frontend to pass and receive history
     inputs = {
         "messages": [HumanMessage(content=user_query)],
         "chat_history": history
@@ -138,6 +162,7 @@ def run_agent(user_query: str, history: list = []):
     return result["final_answer"]
 
 def load_book_into_agent(full_text: str):
-    if not full_text: return
+    if not full_text:
+        return
     chunks = [full_text[i:i+1000] for i in range(0, len(full_text), 1000)]
     book_memory.ingest_book(chunks)
