@@ -1,0 +1,7 @@
+backend/uploads/*
+!backend/uploads/.gitkeep
+.env
+node_modules/
+dist/
+build/
+__pycache__/
