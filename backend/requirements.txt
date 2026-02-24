@@ -3,7 +3,6 @@ fastapi==0.124.0
 uvicorn==0.38.0
 python-multipart==0.0.20
 slowapi
-langchain-groq
 
 # --- AI and Agents ---
 google-genai
@@ -11,6 +10,11 @@ google-generativeai
 groq==0.37.1
 langchain==1.1.3
 langchain-community==0.4.1
+langchain-groq
+langchain-huggingface
+langchain-google-genai
+sentence-transformers
+faiss-cpu
 youtube-transcript-api
 nltk
 reportlab
