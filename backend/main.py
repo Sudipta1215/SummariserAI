@@ -58,8 +58,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:3000",
         "http://localhost:8501",
-        "http://127.0.0.1:8501",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -70,8 +70,7 @@ app.add_middleware(
 # ✅ STATIC FILES
 # =========================================
 frames_dir = os.path.join(PROJECT_ROOT, "frontend", "static")
-if not os.path.exists(frames_dir):
-    os.makedirs(frames_dir, exist_ok=True)
+os.makedirs(frames_dir, exist_ok=True)
 app.mount("/static", StaticFiles(directory=frames_dir), name="static")
 
 # =========================================
@@ -81,18 +80,16 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 # =========================================
-# ✅ IMPORT ROUTERS
+# ✅ REGISTER ALL ROUTERS
 # =========================================
 from app.routers import (
     auth, books, summarizer, workspaces, 
     admin, agent, audio, graph, quiz, 
-    translate, translate_sarvam,
-    sentiment  # ✅ ENABLED (Uncommented)
+    translate, translate_sarvam, 
+    youtube, 
+    meeting  # ✅ Added Meeting Router import
 )
 
-# =========================================
-# ✅ REGISTER ROUTES
-# =========================================
 app.include_router(auth.router, prefix="/auth", tags=["Auth"]) 
 app.include_router(books.router, prefix="/books", tags=["Books"])
 app.include_router(workspaces.router, prefix="/workspaces", tags=["Workspaces"])
@@ -104,49 +101,27 @@ app.include_router(agent.router, prefix="/agent", tags=["Agent"])
 app.include_router(translate.router, prefix="/translate", tags=["Translation"])
 app.include_router(translate_sarvam.router, prefix="/translate", tags=["Sarvam AI"])
 app.include_router(audio.router, prefix="/audio", tags=["Audio"])
+app.include_router(youtube.router, prefix="/youtube", tags=["YouTube Summary"])
 
-# ✅ ENABLED: Sentiment Router is active
-app.include_router(sentiment.router, prefix="/analytics", tags=["Analytics"])
+# ✅ Register the Meeting Router with prefix
+app.include_router(meeting.router, prefix="/meeting", tags=["Meeting Summarizer"])
 
 # =========================================
-# ✅ DASHBOARD DATA ENDPOINT
+# ✅ ENDPOINTS
 # =========================================
 @app.get("/api/dashboard/data")
 def get_dashboard_data():
     return {
-        "stats": {
-            "positive_score": 1.09,
-            "confidence": 64,
-            "positive_count": 12,
-            "neutral_count": 7,
-            "negative_count": 2
-        },
-        "trend_data": [
-            {"id": 1, "val": 2}, {"id": 2, "val": 2.2}, {"id": 3, "val": 1.8},
-            {"id": 4, "val": 3.5}, {"id": 5, "val": 4.8}, {"id": 6, "val": 4.2},
-            {"id": 7, "val": 2.5}, {"id": 8, "val": 3.0}, {"id": 9, "val": 3.8},
-            {"id": 10, "val": 2.2}, {"id": 11, "val": 2.5}
-        ],
-        "distribution": [
-            {"name": "Neutral", "value": 64, "color": "#6366F1"},
-            {"name": "Positive", "value": 36, "color": "#4ADE80"},
-        ]
+        "stats": {"positive_score": 1.09, "confidence": 64, "positive_count": 12, "neutral_count": 7, "negative_count": 2},
+        "trend_data": [{"id": i, "val": v} for i, v in enumerate([2, 2.2, 1.8, 3.5, 4.8, 4.2, 2.5, 3.0, 3.8, 2.2, 2.5], 1)],
+        "distribution": [{"name": "Neutral", "value": 64, "color": "#6366F1"}, {"name": "Positive", "value": 36, "color": "#4ADE80"}]
     }
 
-# =========================================
-# ✅ BASIC HEALTH CHECK
-# =========================================
 @app.get("/")
 def read_root():
     return {"message": "✅ Book Summarizer API is Online"}
 
-# =========================================
-# ✅ GLOBAL ERROR HANDLER
-# =========================================
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled error: {exc}", exc_info=True)
-    return JSONResponse(
-        status_code=500,
-        content={"detail": "An unexpected error occurred."}
-    )
+    return JSONResponse(status_code=500, content={"detail": "An unexpected error occurred."})

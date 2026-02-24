@@ -3,7 +3,8 @@ import { Routes, Route, useNavigate, useLocation, Navigate } from "react-router-
 import {
   LayoutDashboard, BookOpen, FileText, Share2, MessageSquare,
   Settings, LogOut, Activity, Bell, Search, BrainCircuit,
-  UploadCloud, Palette, ThumbsUp, AlertTriangle, RefreshCw
+  UploadCloud, Palette, ThumbsUp, AlertTriangle, RefreshCw,
+  Sparkles // ✅ Added Sparkles icon for the new Media AI section
 } from "lucide-react";
 import {
   LineChart, Line, YAxis, ResponsiveContainer, Tooltip, PieChart, Pie, Cell
@@ -20,7 +21,7 @@ import SettingsPage from "./pages/Settings";
 import Summaries from "./pages/Summaries";
 import UploadPage from "./pages/Upload";
 import Workspace from "./pages/Workspace";
-// REMOVED: import SentimentArc from "./pages/SentimentArc";
+import MediaSummarizer from "./pages/MediaSummarizer"; // ✅ Swapped to unified component
 
 /* --- ADMIN IMPORTS --- */
 import RoleSelection from "./pages/RoleSelection";
@@ -108,7 +109,6 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 animate-fade-in p-8">
-      {/* Top Welcome Card */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-[#2A2B3D] to-[#1E1E2E] p-8 border border-white/10 shadow-2xl">
         <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none" />
         <div className="relative z-10 flex items-center justify-between">
@@ -223,24 +223,16 @@ export default function App() {
           {(() => {
             const path = location.pathname.replace(/\/+$/, ""); 
 
-            // 1. STANDALONE PAGES (No Sidebar)
             if (path === "/role-selection" || path === "/admin-dashboard") {
               return (
                 <Routes>
-                  <Route 
-                    path="/role-selection" 
-                    element={<ProtectedRoute requireAdmin={true} user={user}><RoleSelection /></ProtectedRoute>} 
-                  />
-                  <Route 
-                    path="/admin-dashboard" 
-                    element={<ProtectedRoute requireAdmin={true} user={user}><AdminDashboard /></ProtectedRoute>} 
-                  />
+                  <Route path="/role-selection" element={<ProtectedRoute requireAdmin={true} user={user}><RoleSelection /></ProtectedRoute>} />
+                  <Route path="/admin-dashboard" element={<ProtectedRoute requireAdmin={true} user={user}><AdminDashboard /></ProtectedRoute>} />
                   <Route path="*" element={<Navigate to="/" />} />
                 </Routes>
               );
             }
 
-            // 2. DASHBOARD PAGES (With Sidebar)
             const activePage = location.pathname === "/" ? "dashboard" : location.pathname.substring(1);
             
             return (
@@ -256,9 +248,9 @@ export default function App() {
                       { id: "library", label: "My Library", path: "/library", icon: BookOpen },
                       { id: "workspace", label: "Workspace", path: "/workspace", icon: Palette },
                       { id: "summaries", label: "Summarizer", path: "/summaries", icon: FileText },
+                      { id: "media-ai", label: "Media Intelligence", path: "/media-ai", icon: Sparkles }, // ✅ Unified Sidebar Item
                       { id: "chat", label: "Agent Chat", path: "/chat", icon: MessageSquare },
                       { id: "graph", label: "Knowledge Graph", path: "/graph", icon: Share2 },
-                      // REMOVED: { id: "sentiment", label: "Sentiment Arc", path: "/sentiment", icon: Activity },
                       { id: "quiz", label: "Knowledge Quiz", path: "/quiz", icon: BrainCircuit },
                       { id: "settings", label: "Settings", path: "/settings", icon: Settings },
                     ].map(item => (
@@ -274,7 +266,7 @@ export default function App() {
 
                 <main className="flex-1 flex flex-col h-screen overflow-hidden relative">
                   <header className="h-20 border-b border-white/5 flex items-center justify-between px-8 bg-[#0F1016]/90 backdrop-blur-md sticky top-0 z-50">
-                    <h2 className="text-xl font-bold text-white capitalize">{activePage}</h2>
+                    <h2 className="text-xl font-bold text-white capitalize">{activePage.replace("-", " ")}</h2>
                     <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-500 rounded-full flex items-center justify-center text-white font-bold">
                       {user.name ? user.name.substring(0, 1).toUpperCase() : "U"}
                     </div>
@@ -287,9 +279,9 @@ export default function App() {
                       <Route path="/library" element={<MyLibrary />} />
                       <Route path="/workspace" element={<Workspace />} />
                       <Route path="/summaries" element={<Summaries />} />
+                      <Route path="/media-ai" element={<MediaSummarizer />} /> {/* ✅ Unified Route Registered */}
                       <Route path="/chat" element={<AgentChat />} />
                       <Route path="/graph" element={<KnowledgeGraph />} />
-                      {/* REMOVED: <Route path="/sentiment" element={<SentimentArc />} /> */}
                       <Route path="/quiz" element={<QuizPage />} />
                       <Route path="/settings" element={<SettingsPage />} />
                       <Route path="*" element={<Navigate to="/" />} />
