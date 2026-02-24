@@ -5,8 +5,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 
-const API_URL = "http://127.0.0.1:8000";
-
+const API_URL = "https://summariserai2.onrender.com";
 const Workspace = () => {
   const canvasRef = useRef(null);
   const contextRef = useRef(null);
