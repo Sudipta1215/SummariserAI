@@ -14,7 +14,11 @@ from slowapi.errors import RateLimitExceeded
 from app.limiter import limiter
 from app.utils.database import engine
 from app.models import Base
-
+import nltk
+# This ensures the 'punkt' tokenizer is available on the server
+nltk.download('punkt')
+nltk.download('punkt_tab')
+nltk.download('averaged_perceptron_tagger')
 # =========================================
 # ✅ PATH SETUP & LOGGING
 # =========================================
