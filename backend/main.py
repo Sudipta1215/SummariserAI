@@ -60,6 +60,7 @@ app.add_middleware(
         "http://127.0.0.1:5173",
         "http://localhost:3000",
         "http://localhost:8501",
+        "https://summariserai-frotnend.onrender.com",  # ✅ Production frontend
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -102,8 +103,6 @@ app.include_router(translate.router, prefix="/translate", tags=["Translation"])
 app.include_router(translate_sarvam.router, prefix="/translate", tags=["Sarvam AI"])
 app.include_router(audio.router, prefix="/audio", tags=["Audio"])
 app.include_router(youtube.router, prefix="/youtube", tags=["YouTube Summary"])
-
-# ✅ Register the Meeting Router with prefix
 app.include_router(meeting.router, prefix="/meeting", tags=["Meeting Summarizer"])
 
 # =========================================
