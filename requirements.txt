@@ -6,7 +6,9 @@ python-multipart==0.0.20
 fastapi==0.124.0
 uvicorn==0.38.0
 python-multipart==0.0.20
-
+# Add these to your existing file
+nltk
+slowapi
 # AI and External APIs
 google-generativeai
 youtube-transcript-api
